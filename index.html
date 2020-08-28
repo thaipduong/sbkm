@@ -119,7 +119,7 @@
 
 <html>
   <head>
-        <title>Kernel-based Mapping and Navigation</title>
+        <title>Sparse Bayesian Kernel-based Mapping and Autonomous Navigation</title>
         <meta property="og:title" content="Kernel-basedMap" />
         <meta property="og:image" content="" />
         <meta property="og:url" content="" />
@@ -171,19 +171,19 @@
      <tr>
        <td align=center width=100px>
        <center>
-       <span style="font-size:20px"><a href="https://arxiv.org/pdf/2002.01921.pdf">[Paper]</a></span>
+       <span style="font-size:20px"><a href="tbd">[Paper (TBD)]</a></span>
        </center>
        </td>
 
       <td align=center width=100px>
       <center>
-      <span style="font-size:20px"><a href="https://youtu.be/FY_qDmXIaQE">[Video]</a></span>
+      <span style="font-size:20px"><a href="https://youtu.be/6zH8f6PtscM">[Video]</a></span>
       </center>
       </td>
        
       <td align=center width=100px>
       <center>
-      <span style="font-size:20px"><a href="https://github.com/thaipduong/sbkm">[Code]</a></span>
+      <span style="font-size:20px"><a href="https://github.com/thaipduong/sbkm">[Code (TBD)]</a></span>
       </center>
       </td>
     
@@ -205,16 +205,18 @@
                     <!--<td width=300px align=left>-->
                     <!-- <a href="http://arxiv.org/pdf/1603.08511.pdf"> -->
                   <!-- <td><a href="#"><img class="layered-paper-big" style="height:175px" src="./resources/images/paper.png"/></a></td> -->
-                  <td><a href="https://arxiv.org/pdf/2002.01921.pdf"><img style="height:300px" src="./resources/images/preview.png"/></a></td>
+                  <td><a href="tbd"><img style="height:300px" src="./resources/images/thumbnails_sbkm.png"/></a></td>
                   <td><span style="font-size:14pt">Thai Duong, Nikhil Das, Michael Yip, Nikolay Atanasov<br><br>
                           Autonomous Navigation in Unknown Environments using Sparse Bayesian Kernel-based Occupancy Mapping<br><br>
                   In Submission, 2020.<br><br>
-                      <a href="https://arxiv.org/pdf/2002.01921.pdf">[pdf]</a> &nbsp; &nbsp;
+                      <a href="tbd">[pdf]</a> &nbsp; &nbsp;
                    <!--    <a href="./resources/bibtex.txt">[Bibtex]</a> -->
                   <!-- [hosted on <a href="#">arXiv</a>]</a> -->
                     </td>
               </tr>
             </table>
+      
+
       
       
                 <hr>
@@ -224,7 +226,7 @@
                         <td width=600px>
                           <center>
                             <div class = "video">
-                              <iframe width="800" height="480" src="https://www.youtube.com/embed/FY_qDmXIaQE" frameborder="0" allowfullscreen></iframe>
+                                    <iframe width="800" height="480" src="https://www.youtube.com/embed/6zH8f6PtscM" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
                            </div>
                         </center>
                         </td>
@@ -239,6 +241,33 @@
                     <br>
             <td width=600px>
                       <center>
+                          <span style="font-size:28px">Settings
+                          <br>
+                          <br>
+                    </center>
+                    </td>
+            <br>
+            <table align=center width=600px>
+                <tr>
+                    <td width=600px>
+                      <center>
+                          <a href="./resources/images/robot_unknown_env.jpg"><img src = "./resources/images/robot_unknown_env.jpg" height="450px"></img></href></a><br>
+                    </center>
+                    </td>
+                </tr>
+                    <td width=600px>
+                      <center>
+                          <span style="font-size:18px"><i> A ground robot is placed in an unknown environment. Its tasks are to build a probabilistic occupancy map of the environment and plan a trajectory from the current position to a goal region in the free space. The map should be built online along the way and the trajectory is re-planned accordingly.</i>
+                    </center>
+                    </td>
+                </tr>
+            </table>
+              </tr>
+            </table>
+            <br>
+
+            <td width=600px>
+                      <center>
                           <span style="font-size:28px">Map updates
                           <br>
                           <br>
@@ -249,13 +278,13 @@
                 <tr>
                     <td width=600px>
                       <center>
-                          <a href="./resources/images/mapping.gif"><img src = "./resources/images/mapping.gif" height="450px"></img></href></a><br>
+                          <a href="./resources/images/MappingProcess.gif"><img src = "./resources/images/MappingProcess.gif" height="450px"></img></href></a><br>
                     </center>
                     </td>
                 </tr>
                     <td width=600px>
                       <center>
-                          <span style="font-size:18px"><i>Given a streaming local depth observation (e.g. lidar scan), we sample occupied and free points to generate a training dataset. The dataset is used to train a kernel perceptron model and the resulting support vectors are stored as a map. Upon receiving new observations, the map as a set of support vectors is updated.</i>
+                          <span style="font-size:18px"><i>Given a streaming local depth observation (e.g. lidar scan), we sample occupied and free points to generate a training dataset. The dataset is used to incrementally train a Relevance Vector Machine model and the resulting relevance vectors are stored as a map. Upon receiving new observations, the map as a sparse set of relevance vectors is updated.</i>
                     </center>
                     </td>
                 </tr>
@@ -274,48 +303,23 @@
                 <tr>
                     <td width=600px>
                       <center>
-                          <a href="./resources/images/collision_checking.gif"><img src = "./resources/images/collision_checking.gif" height="450px"></img></href></a><br>
+                          <a href="./resources/images/CollisionChecking.gif"><img src = "./resources/images/CollisionChecking.gif" height="450px"></img></href></a><br>
                     </center>
                     </td>
                 </tr>
                     <td width=600px>
                       <center>
-                          <span style="font-size:18px"><i>Using the support vectors, we propose an "inflated boundary" of the obstacles. For line segments, the intersection with the inflated boundary can be computed efficiently regardless of the segment length. For polynomial curves, a safety ball can be calculated efficiently using the "inflated boundary" and collision checking is performed by iteratively placing safety balls along the curves. </i>
+                          <span style="font-size:18px"><i>Using the relevance vectors, we propose an "inflated boundary" of the obstacles. For line segments, the intersection with the inflated boundary can be computed efficiently in closed form regardless of the segment length. For polynomial curves, a safety ellipsoid is computed efficiently in closed form using the "inflated boundary". Collision checking is then performed by iteratively placing safety balls along the curves. </i>
                     </center>
                     </td>
                 </tr>
             </table>
             <br>
 
-          <td width=600px>
-                      <center>
-                          <span style="font-size:28px"> Autonomous Navigation and Mapping
-                    </center>
-                    </td>
-          <br>
-              <table align=center width=600px>
-                <tr>
-                    <td width=600px>
-                      <center>
-                          <!--
-                          <a href="./resources/images/sim_long.gif"><img src = "./resources/images/sim_long.gif" height="450px"></img></href></a><br>
-                            -->
-                          <iframe width="800" height="480" src="https://www.youtube.com/embed/afuvRPSyNw4?loop=1" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
-                    </center>
-                    </td>
-                </tr>
-                    <td width=600px>
-                      <center>
-                          <span style="font-size:18px"><i>Autonomous mapping and navigation in an unknown simulated warehouse environment: Given the current kernel-based map, an A* planner is used with our collision-checking algorithms to generate a robot path. The robot follows the path for some time and updates the map estimate with new observations. Using the updated map, the robot re-plans the path and follows the new path instead. This process is repeated until the goal is reached</i>
-                    </center>
-                    </td>
-                </tr>
-            </table>
-            <br>
-
+          
 
         <hr>
-         <center><h1>Code</h1></center>
+         <center><h1>Code (TBD)</h1></center>
             <table align=center width=800px>
               <tr><center> <br>
                 <span style="font-size:28px">&nbsp;<a href='https://github.com/thaipduong/sbkm'>[github]</a>
@@ -338,7 +342,7 @@
         </td>
         </tr>
         </table>
-<div style="display:inline-block;width:200px;"><script type="text/javascript" src="//rf.revolvermaps.com/0/0/7.js?i=556zb6z1e66&amp;m=0&amp;c=ff0000&amp;cr1=ffffff&amp;sx=0" async="async"></script></div>
+<div style="display:inline-block;width:200px;"><script type="text/javascript" src="//rf.revolvermaps.com/0/0/7.js?i=5es3iic6u4w&amp;m=6&amp;c=ff0000&amp;cr1=ffffff&amp;sx=0" async="async"></script></div>
 
         <br><br>
 </body>

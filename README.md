@@ -3,13 +3,18 @@ This repo provides code for our paper "Autonomous Navigation in Unknown Environm
 Please check out our project website for more details: https://thaipduong.github.io/sbkm.
 
 ## Dependencies
-To be updated.
+Our code depends on the following Python packages: numpy, scipy, panda, rtree, matplotlib, sklearn.
+Tested with Ubuntu 18.04 and Python 3.7.
 ## Demo
-<img src="figs/demo.gif" width="800">
+Run ```python sbkm_demo.py``` for a demo with Intel Research Lab dataset
+
+<img src="figs/demo.gif" width="900">
 
 ## Citation
-If you find our papers/code useful for your research, any citation to our work is highly appreciated.
+If you find our papers/code useful for your research, please cite our work as follows.
+
 1. T. Duong, M. Yip, N. Atanasov. [Autonomous Navigation in Unknown Environments with Sparse __*Bayesian*__ Kernel-based Occupancy Mapping](https://thaipduong.github.io/sbkm/). In Submission. 2020
+
  ```bibtex
 @article{duong2020autonomousbayesian,
   title={Autonomous Navigation in Unknown Environments with Sparse Bayesian Kernel-based Occupancy Mapping},
@@ -19,7 +24,7 @@ If you find our papers/code useful for your research, any citation to our work i
   year={2020}
  }
 ```
-2. T. Duong, N. Das, M. Yip, N. Atanasov. [Autonomous Navigation in Unknown Environments using Sparse Kernel-based Occupancy Mapping](https://thaipduong.github.io/kernelbasedmap/). IEEE International Conference on Robotics and Automation (ICRA), 2020.
+2.  T. Duong, N. Das, M. Yip, N. Atanasov. [Autonomous Navigation in Unknown Environments using Sparse Kernel-based Occupancy Mapping](https://thaipduong.github.io/kernelbasedmap/). IEEE International Conference on Robotics and Automation (ICRA), 2020.
  
  ```bibtex
 @inproceedings{duong2020autonomous,
@@ -31,3 +36,5 @@ If you find our papers/code useful for your research, any citation to our work i
    pdf = {https://arxiv.org/pdf/2002.01921.pdf}
  }
 ```
+## Acknowledgement
+Our code was built on top of the original fast Relevance Vector Machine training (https://github.com/AmazaspShumik/sklearn-bayes) and the Intel Research lab dataset was borrowed from Sparse Bayesian Hilbert Map code (https://github.com/RansML/Bayesian_Hilbert_Maps)

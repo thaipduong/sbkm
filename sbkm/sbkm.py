@@ -14,7 +14,7 @@ import warnings
 import time
 from rtree import index
 
-DECISION_THRESHOLD = 0.01 # Decision threshold parameter e
+DEFAULT_DECISION_THRESHOLD = 0.01 # Decision threshold parameter e
 UNKNOWN_PROB_PARAM = 0.0 # Param for occupancy probability in unknown regions: b
 
 
@@ -683,6 +683,29 @@ class SBKM(ProbitRVC):
         var = np.sum(np.matmul(K, self.Sn) * K, axis=1)
         return decision, var
 
+    def get_feature_matrix(self, X):
+        '''
+        Calculate the feature matrix for points in X
+
+        Parameters
+        ----------
+        X (array of size [n_samples, n_features]):
+            Querying data containing n_samples points.
+
+        Returns
+        -------
+        K (array of size [n_samples, n_rvs]):
+            Feature matrix where n_rvs is the number of relevance vectors.
+        '''
+        X = check_array(X, accept_sparse=False, dtype=np.float64)
+        n_features = len(self.all_rv_X[0])
+        if X.shape[1] != n_features:
+            raise ValueError("X has %d features per sample; expecting %d"
+                             % (X.shape[1], n_features))
+        kernel = lambda rvs: get_kernel(X, rvs, self.gamma, self.kernel)
+        K = kernel(self.all_rv_X)
+        return K
+
     def predict_proba(self, X):
         '''
         Predicts occupancy probabilities of point x in X.
@@ -704,187 +727,3 @@ class SBKM(ProbitRVC):
             prob = np.vstack([1 - prob, prob]).T
         prob = prob / np.reshape(np.sum(prob, axis=1), (prob.shape[0], 1))
         return prob
-
-    def check_line_segment(self, A, B, e=DECISION_THRESHOLD):
-        '''
-        Check line segment AB for collision
-
-        Parameters
-        ----------
-        s0 (float):
-            Start point of the ray
-
-        alpha (array):
-            Array of relevance vectors and correct weights
-
-        v (array of size [n_features,]):
-            Velocity vector that defines the ray direction
-
-        Returns
-        -------
-        collision_free (bool):
-            True if the line segment is free, False, otherwise.
-        t_uA (float):
-            Intersection from A endpoint
-        t_uB (float):
-            Intersection from B endpoint
-        '''
-        lambda_max_sqrt = np.sqrt(LA.norm(self.Sn, ord=2))
-        corrected_w = self.Mn - e * lambda_max_sqrt if e < 0 else self.Mn
-        v = B - A
-        rvs = self.relevant_vectors_[0]
-        t_uA = self.check_ray(A, rvs, corrected_w, v, e=e)
-        t_uB = self.check_ray(B, rvs, corrected_w, -v, e=e)
-        if t_uA + t_uB >= 1.0:
-            collision_free = True
-        else:
-            collision_free = False
-        return collision_free, t_uA, t_uB
-
-    def check_ray(self, s0, rvs, corrected_w, v, e=DECISION_THRESHOLD):
-        '''
-        Find t_u such that the ray x(t) = s0 + vt is free for t in [0,t_u]
-
-        Parameters
-        ----------
-        s0 (float):
-            Start point of the ray
-
-        rvs (array):
-            Array of relevance vectors
-
-        corrected_w (array):
-            Corrected weights of the relevance vectors
-
-        v (array of size [n_features,]):
-            Velocity vector that defines the ray direction
-
-        e (float):
-            Determine the decision threshold as the probit function of e.
-
-        Returns
-        -------
-        t_u (float):
-           Intersection with obstacle "inflated boundary"
-
-        '''
-        n = 1
-        total_plus = np.sum(corrected_w[corrected_w > 0])
-        t_u = None
-        for j in range(len(corrected_w)):
-            if corrected_w[j] < 0:
-                continue
-            temp_max = -1
-            for k in range(len(corrected_w)):
-                if corrected_w[k] > 0:
-                    continue
-                beta = np.log(n + 1) + (n / (n + 1)) * np.log((e - self.intercept_[0]) / n) + np.log(
-                    -corrected_w[k]) / (n + 1) - np.log(total_plus)
-                # Quadratic conditions
-                a = -n * (v[0] ** 2 + v[1] ** 2) * self.gamma
-                temp1 = n * s0 + rvs[k, :] - (n + 1) * rvs[j, :]
-                b = -2 * np.dot(v, temp1) * self.gamma
-                c = (-(n + 1) * (np.linalg.norm(s0 - rvs[j, :]) ** 2) + np.linalg.norm(
-                    s0 - rvs[k, :]) ** 2) * self.gamma - (n + 1) * beta
-                delta = b ** 2 - 4 * a * c
-                if delta <= 0:
-                    t1 = 100000
-                else:
-                    t1 = (-b + np.sqrt(delta)) / (2 * a)
-                    t2 = (-b - np.sqrt(delta)) / (2 * a)
-
-                if t1 >= 0:
-                    if t1 > temp_max:
-                        temp_max = t1
-                elif t2 < 0:
-                    temp_max = 100000
-            if temp_max < 0:
-                t_u = -1
-                break
-            elif t_u is None or temp_max < t_u:
-                t_u = temp_max
-        return t_u
-
-    def get_radius(self, A, e=DECISION_THRESHOLD):
-        '''
-        Check line segment AB for collision
-
-        Parameters
-        ----------
-        A (array of size [n_features,]):
-            Point A that we want to find safety ball around.
-
-        Returns
-        -------
-        r (float):
-            Safety ball radius
-        '''
-        lambda_max_sqrt = np.sqrt(LA.norm(self.Sn, ord=2))
-        corrected_w = self.Mn - e * lambda_max_sqrt if e < 0 else self.Mn
-        rvs = self.relevant_vectors_[0]
-        radius = self.check_radius(A, rvs, corrected_w, e=e)
-        return radius
-
-    def check_radius(self, s0, rvs, corrected_w, e=DECISION_THRESHOLD):
-        '''
-        Find r_u such that the interior of the ball B(s0,r_u) is free.
-
-        Parameters
-        ----------
-        s0 (float):
-            The point where we want to find safety ball around.
-
-        rvs (array):
-            Array of relevance vectors.
-
-        corrected_w (array):
-            Array of relevance vectors and correct weights.
-
-        e (float):
-            Determine the decision threshold as the probit function of e.
-
-        Returns
-        -------
-        r_u (float):
-           The radius of the safety around s0.
-
-        '''
-        n = 1
-        total_plus = np.sum(corrected_w[corrected_w > 0])
-        r_u = None
-        for j in range(len(corrected_w)):
-            if corrected_w[j] < 0:
-                continue
-            temp_max = -1
-            for k in range(len(corrected_w)):
-                if corrected_w[k] > 0:
-                    continue
-                beta = np.log(n + 1) + (n / (n + 1)) * np.log((e - self.fixed_intercept) / n) + np.log(
-                    -corrected_w[k]) / (n + 1) - np.log(total_plus)
-                # Quadratic conditions
-                a = -n
-                temp1 = n * s0 + rvs[k] - (n + 1) * rvs[j]
-                b = 2 * np.linalg.norm(temp1) * np.sqrt(self.gamma)
-                temp = s0 - rvs[j]
-                temp2 = np.linalg.norm(temp) ** 2
-                c = (-(n + 1) * (np.linalg.norm(s0 - rvs[j]) ** 2) + np.linalg.norm(
-                    s0 - rvs[k]) ** 2) * self.gamma - (n + 1) * beta
-                delta = b ** 2 - 4 * a * c
-                if delta <= 0:
-                    t1 = 100000
-                else:
-                    t1 = (-b + np.sqrt(delta)) / (2 * a)
-                    t2 = (-b - np.sqrt(delta)) / (2 * a)
-
-                if t1 >= 0:
-                    if t1 > temp_max:
-                        temp_max = t1
-                elif t2 < 0:
-                    temp_max = 100000
-            if temp_max < 0:
-                r_u = -1
-                break
-            elif r_u is None or temp_max < r_u:
-                r_u = temp_max
-        r_u = r_u / np.sqrt(self.gamma)
-        return r_u

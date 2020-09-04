@@ -2,7 +2,7 @@ from sbkm.sbkm import SBKM
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-import pickle
+#import pickle
 import time
 
 #
@@ -10,7 +10,7 @@ import time
 #
 def load_parameters():
     parameters = {'intel': \
-                      ('./Datasets/intel.csv',
+                      ('./data/intel.csv',
                        (0.2, 0.2), # grid resolution for occupied samples and free samples, respectively
                        (-20, 20, -25, 10),  # area to be mapped [x1_min, x1_max, x2_min, x2_max]
                        1, # skip
@@ -36,13 +36,13 @@ print(sum(Y_train), sum(Y_test))
 #
 # Plot the dataset accumulated from all time steps.
 #
-'''
+''''''
 plt.figure()
 plt.scatter(X_train[:, 1], X_train[:, 2], c=Y_train, s=2)
 plt.title('Training data')
 plt.colorbar()
 plt.show()
-'''
+
 
 #
 # Set up our SBKM model
@@ -63,7 +63,7 @@ X_query = np.hstack((xx.ravel()[:, np.newaxis], yy.ravel()[:, np.newaxis]))
 pres = res[0]
 nres = res[1]
 t1 = time.time()
-max_t = len(np.unique(g[:, 0]))
+max_t = 100
 print("Total number of scans = ", max_t)
 for ith_scan in range(0, max_t, skip):
 
@@ -107,5 +107,12 @@ for ith_scan in range(0, max_t, skip):
     plt.colorbar()
     plt.xlim([cell_max_min[0], cell_max_min[1]]);
     plt.ylim([cell_max_min[2], cell_max_min[3]])
-    plt.savefig('./Outputs/imgs/step' + str(ith_scan).zfill(3) + '.png', bbox_inches='tight')
+    plt.savefig('./outputs/imgs/step' + str(ith_scan).zfill(3) + '.png', bbox_inches='tight')
     plt.close("all")
+
+
+# f = open("./outputs/sbkm_class.pkl", "wb")
+# pickle.dump(sbkm_map, f)
+# f.close()
+#
+# print("Saved file")

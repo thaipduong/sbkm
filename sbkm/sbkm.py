@@ -14,8 +14,8 @@ import warnings
 import time
 from rtree import index
 
-DEFAULT_DECISION_THRESHOLD = 0.01 # Decision threshold parameter e
-UNKNOWN_PROB_PARAM = 0.0 # Param for occupancy probability in unknown regions: b
+DEFAULT_DECISION_THRESHOLD = 0.1 # Decision threshold parameter e
+UNKNOWN_PROB_PARAM = 0.05 # Param for occupancy probability in unknown regions: b
 
 
 ###############################################################################
@@ -180,7 +180,7 @@ class ProbitRVC(BaseEstimator,LinearClassifierMixin):
         ----------
         X (array of size [n_samples, n_features]):
            Training data.
-        
+
         y (array of size [n_samples, ])
            Labels for training data.
            
@@ -500,7 +500,6 @@ class SBKM(ProbitRVC):
         self (class object)
            self
         '''
-        time0 = time.time()
         X, y = self.gen_dataset(X, y, pres = pres, nres = nres)
         self.cur_X = np.copy(X).tolist()
         self.cur_y = np.copy(y).tolist()
@@ -587,19 +586,17 @@ class SBKM(ProbitRVC):
             else:
                 count_dict[(r[0], r[1])] = count_dict[(r[0], r[1])] + 1
             if r not in self.relevant_vectors_dict.keys():
-                self.relevant_vectors_dict[(r[0], r[1])] = (self.rv_labels[0][i], self.rv_A[0][i])
+                self.relevant_vectors_dict[(r[0], r[1])] = (self.rv_labels[0][i], self.rv_A[0][i], 0.0)
                 self.rtree_index.insert(int(2*(r[0]*10000 + 2*r[1])), (r[0], r[1], r[0], r[1]))
             else:
                 rv_label_A = self.relevant_vectors_dict[(r[0], r[1])]
                 if self.rv_labels[0][i] != rv_label_A[0] or self.rv_A[0][i] < rv_label_A[1]:
                     #print(self.rv_labels[0][i], rv_label_A[0])
-                    self.relevant_vectors_dict[(r[0], r[1])] = (self.rv_labels[0][i], self.rv_A[0][i])
+                    self.relevant_vectors_dict[(r[0], r[1])] = (self.rv_labels[0][i], self.rv_A[0][i], 0.0)
         # Call Laplace approximation on the set of relevance vectors to calculate the mean and covariance of the weights
         self.global_posterior_approx()
         self.prev_X = self.cur_X
         self.prev_y = self.cur_y
-        time1 = time.time()
-        print("Update time:", time1 - time0)
         return self
 
     def global_posterior_approx(self, a_thres = -1.0):
@@ -638,6 +635,11 @@ class SBKM(ProbitRVC):
         # Call Laplace approximation
         Mn, Sn, cholesky = self._posterior_dist_global(all_rv_K, all_rv_y, all_rv_A, tol_solver=0.01*self.tol_solver,
                                                        n_iter_solver=100*self.n_iter_solver)
+
+        # Update the weight mean in the dictionary for fast query
+        for i in range(len(self.all_rv_X)):
+            value = self.relevant_vectors_dict[(self.all_rv_X[i][0], self.all_rv_X[i][1])]
+            self.relevant_vectors_dict[(self.all_rv_X[i][0], self.all_rv_X[i][1])] = (value[0], value[1], Mn[i])
         # in case Sn is inverse of lower triangular matrix of Cholesky decomposition
         # compute covariance using formula Sn  = np.dot(Rinverse.T , Rinverse)
         if cholesky:
@@ -727,3 +729,341 @@ class SBKM(ProbitRVC):
             prob = np.vstack([1 - prob, prob]).T
         prob = prob / np.reshape(np.sum(prob, axis=1), (prob.shape[0], 1))
         return prob
+    ####################################################################################################################
+    ################################ COLLISION CHECKING FUNCTIONS ######################################################
+    def build_rtree_collision_checking(self):
+        '''
+        Rebuild the rtree of the relevance vector if needed, especially if the model is loaded from a pickle file.
+        '''
+        self.rtree_index = index.Index()
+        for r in self.relevant_vectors_dict.keys():
+            self.rtree_index.insert(int(2 * (r[0] * 10000 + 2 * r[1])), (r[0], r[1], r[0], r[1]))
+
+    def check_line_segment(self, A, B, e=DEFAULT_DECISION_THRESHOLD, n1 = 1.0, n2 = 1.0, k_nearest = None):
+        '''
+        Check line segment AB for collision
+
+        Parameters
+        ----------
+        A (array of size [n_features,]):
+            Start point of the segment
+
+        B (array of size [n_features,]):
+            End point of the segment.
+
+        e (float):
+            Determine the decision threshold as the probit function of e.
+
+        n1 (int):
+            Parameter n1 in our collision checking for line segment. Set to 1 by default.
+
+        n2 (int):
+            Parameter n2 in our collision checking for line segment. Set to 1 by default.
+
+        k_nearest (int):
+            Determine the number of nearest relevance vectors used in our collision checking method.
+            Set to None, i.e. using all relevance vectors, by default.
+
+        Returns
+        -------
+        collision_free (bool):
+            True if the line segment is free, False, otherwise.
+        t_uA (float):
+            Intersection from A endpoint
+        t_uB (float):
+            Intersection from B endpoint
+        '''
+        v = B - A
+        lambda_max_sqrt = np.sqrt(LA.norm(self.Sn, ord=2))
+        corrected_w = self.Mn - e * lambda_max_sqrt if e < 0 else self.Mn
+        total_plus = np.sum(corrected_w[corrected_w > 0])
+        if k_nearest is not None:
+            nearest_rv = self.rtree_index.nearest((A[0], A[1], A[0], A[1]), k_nearest, objects=True)
+            rvs = []
+            corrected_w= []
+            for rv in nearest_rv:
+                rvs.append([rv.bbox[0], rv.bbox[1]])
+                Mni = self.relevant_vectors_dict[(rv.bbox[0], rv.bbox[1])][2]
+                corrected_w.append(Mni - e * lambda_max_sqrt if e < 0 else Mni)
+            rvs = np.array(rvs)
+            corrected_w = np.array(corrected_w)
+        else:
+            rvs = np.array(self.all_rv_X)
+
+        t_uA = self.check_ray(A, rvs, total_plus, corrected_w, v, e=e, n1 = n1, n2 = n2)
+        t_uB = self.check_ray(B, rvs, total_plus, corrected_w, -v, e=e, n1 = n1, n2 = n2)
+        if t_uA + t_uB >= 1.0:
+            collision_free = True
+        else:
+            collision_free = False
+        return collision_free, t_uA, t_uB
+
+    def check_ray(self, s0, rvs, total_plus, corrected_w, v, e=DEFAULT_DECISION_THRESHOLD, n1 = 1.0, n2 = 1.0):
+        '''
+        Find t_u such that the ray x(t) = s0 + vt is free for t in [0,t_u]
+
+        Parameters
+        ----------
+        s0 (float):
+            Start point of the ray
+
+        total_plus (float):
+            The total weight of positive relevance vectors.
+
+        rvs (array):
+            Array of relevance vectors
+
+        corrected_w (array):
+            Corrected weights of the relevance vectors
+
+        v (array of size [n_features,]):
+            Velocity vector that defines the ray direction
+
+        e (float):
+            Determine the decision threshold as the probit function of e.
+
+        n1 (int):
+            Parameter n1 in our collision checking for line segment. Set to 1 by default.
+
+        n2 (int):
+            Parameter n2 in our collision checking for line segment. Set to 1 by default.
+
+        Returns
+        -------
+        t_u (float):
+           Intersection with obstacle "inflated boundary"
+
+        '''
+        t_u = None
+        for j in range(len(corrected_w)):
+            if corrected_w[j] < 0:
+                continue
+            temp_max = -1
+            for k in range(len(corrected_w)):
+                if corrected_w[k] > 0:
+                    continue
+                beta = np.log(n1+n2) + (n1/(n1+n2))*np.log((e - self.intercept_[0])/n1) + np.log(-corrected_w[k]/n2)*n2/(n1+n2) -np.log(total_plus)
+                # Quadratic conditions
+                a = -n1*(v[0]**2 + v[1]**2)*self.gamma
+                temp1 = n1*s0 + n2*rvs[k,:] - (n1+n2)*rvs[j,:]
+                b = -2*np.dot(v,temp1)*self.gamma
+                c = (-(n1+n2)*(np.linalg.norm(s0 - rvs[j,:])**2) + n2*np.linalg.norm(s0 - rvs[k,:])**2)*self.gamma - (n1+n2)*beta
+                delta = b**2 - 4*a*c
+                if delta <= 0:
+                    t1 = 100000
+                else:
+                    t1 = (-b + np.sqrt(delta))/(2*a)
+                    t2 = (-b - np.sqrt(delta)) / (2 * a)
+
+                if t1 >= 0:
+                    if t1 > temp_max:
+                        temp_max = t1
+                elif t2 < 0:
+                    temp_max = 100000
+            if temp_max < 0:
+                t_u = -1
+                break
+            elif t_u is None or temp_max < t_u:
+                t_u = temp_max
+        return t_u
+
+    def get_radius(self, A, e=DEFAULT_DECISION_THRESHOLD, n1 = 1.0, n2 = 1.0, k_nearest = None):
+        '''
+        Check line segment AB for collision
+
+        Parameters
+        ----------
+        A (array of size [n_features,]):
+            Point A that we want to find safety ball around.
+
+        e (float):
+            Determine the decision threshold as the probit function of e.
+
+        n1 (int):
+            Parameter n1 in our collision checking for line segment. Set to 1 by default.
+
+        n2 (int):
+            Parameter n2 in our collision checking for line segment. Set to 1 by default.
+
+        k_nearest (int):
+            Determine the number of nearest relevance vectors used in our collision checking method.
+            Set to None, i.e. using all relevance vectors, by default.
+
+        Returns
+        -------
+        r (float):
+            Safety ball radius
+        '''
+        lambda_max_sqrt = np.sqrt(LA.norm(self.Sn, ord=2))
+        corrected_w = self.Mn - e * lambda_max_sqrt if e < 0 else self.Mn
+        total_plus = np.sum(corrected_w[corrected_w > 0])
+        if k_nearest is not None:
+            #print("Picking k nearest relevance vectors for collision checking")
+            nearest_rv = self.rtree_index.nearest((A[0], A[1], A[0], A[1]), k_nearest, objects=True)
+            rvs = []
+            corrected_w = []
+            # print(len(list(nearest_rv)))
+            for rv in nearest_rv:
+                rvs.append([rv.bbox[0], rv.bbox[1]])
+                Mni = self.relevant_vectors_dict[(rv.bbox[0], rv.bbox[1])][2]
+                corrected_w.append(Mni - e * lambda_max_sqrt if e < 0 else Mni)
+            rvs = np.array(rvs)
+            corrected_w = np.array(corrected_w)
+        else:
+            rvs = np.array(self.all_rv_X)
+        radius = self.check_radius(A, rvs, total_plus, corrected_w, e=e, n1 = n1, n2 = n2)
+        return radius
+
+    def check_radius(self, s0, rvs, total_plus, corrected_w, e=DEFAULT_DECISION_THRESHOLD, n1 = 1.0, n2 = 1.0):
+        '''
+        Find r_u such that the interior of the ball B(s0,r_u) is free.
+
+        Parameters
+        ----------
+        s0 (float):
+            The point where we want to find safety ball around.
+
+        total_plus (float):
+            The total weight of positive relevance vectors.
+
+        rvs (array):
+            Array of relevance vectors.
+
+        corrected_w (array):
+            Array of relevance vectors and correct weights.
+
+        e (float):
+            Determine the decision threshold as the probit function of e.
+
+        n1 (int):
+            Parameter n1 in our collision checking for line segment. Set to 1 by default.
+
+        n2 (int):
+            Parameter n2 in our collision checking for line segment. Set to 1 by default.
+
+        Returns
+        -------
+        r_u (float):
+           The radius of the safety around s0.
+
+        '''
+        r_u = None
+        for j in range(len(corrected_w)):
+            if corrected_w[j] < 0:
+                continue
+            temp_max = -1
+            for k in range(len(corrected_w)):
+                if corrected_w[k] > 0:
+                    continue
+                beta = np.log(n1 + n2) + (n1 / (n1 + n2)) * np.log((e - self.intercept_[0]) / n1) + np.log(
+                    -corrected_w[k]/n2) * n2 / (n1 + n2) - np.log(total_plus)
+                # Quadratic conditions
+                a = -n1
+                temp1 = n1 * s0 + n2 * rvs[k] - (n1 + n2) * rvs[j]
+                b = 2 * np.linalg.norm(temp1) * np.sqrt(self.gamma)
+                c = (-(n1 + n2) * (np.linalg.norm(s0 - rvs[j]) ** 2) + n2 * np.linalg.norm(
+                    s0 - rvs[k]) ** 2) * self.gamma - (n1 + n2) * beta
+                delta = b ** 2 - 4 * a * c
+                if delta <= 0:
+                    t1 = 100000
+                else:
+                    t1 = (-b + np.sqrt(delta)) / (2 * a)
+                    t2 = (-b - np.sqrt(delta)) / (2 * a)
+
+                if t1 >= 0:
+                    if t1 > temp_max:
+                        temp_max = t1
+                elif t2 < 0:
+                    temp_max = 100000
+            if temp_max < 0:
+                r_u = -1
+                break
+            elif r_u is None or temp_max < r_u:
+                r_u = temp_max
+        # Since we have normalized velocity ||v*sqrt(gamma)|| = 1 so r_u should be scaled by 1/sqrt(gamma)
+        r_u = r_u / np.sqrt(self.gamma) if r_u is not None else -1
+        return r_u
+
+    def upperbound_g3(self, X, e = DEFAULT_DECISION_THRESHOLD, n1 = 1, n2 = 1):
+        '''
+        Returns the upper bound G3 derived in our paper. This is for plotting the inflated boundary.
+
+        Parameters
+        ----------
+        X (array of size [n_samples, n_features]):
+            The test points where we want to calculate the upper bound G3 for.
+
+        e (float):
+            Determine the decision threshold as the probit function of e.
+
+        n1 (int):
+            Parameter n1 in our collision checking for line segment. Set to 1 by default.
+
+        n2 (int):
+            Parameter n2 in our collision checking for line segment. Set to 1 by default.
+
+        Returns
+        -------
+        g3 (array of size [n_samples, ]):
+           The values of upper bound G3 for all test points
+
+        '''
+        K = self.get_feature_matrix(X)
+        lambda_max_sqrt = np.sqrt(LA.norm(self.Sn, ord=2))
+        corrected_w = self.Mn - e * lambda_max_sqrt if e < 0 else self.Mn
+
+        pos_term, neg_term= self.score_pos_neg_terms(K, corrected_w)
+
+        # n = 1e189*np.ones(len(upperbound))
+        temp = (e - self.fixed_intercept) / n1
+        g3 = pos_term[:, 0] - (n1 + n2) * np.power(-neg_term[:, 0] / n2, n2 / (n1 + n2)) * np.power(temp, n1 / (n1 + n2))
+        return g3
+
+    def score_pos_neg_terms(self, K, corrected_w):
+        '''
+        Utility function used in our collision checing methods:
+            1) the sum of all positive weight * kernel function corresponding to the nearest positive relevance vectors
+            2) the weight * kernel function corresponding to the nearest negative relevance vector.
+
+        Parameters
+        ----------
+        K (array of size [n_samples, n_features]):
+            Feature matrix of the test points.
+
+        corrected_w (array of size [n_features]):
+            The corrected weight of the relevance vectors using Prop. 3 in our paper.
+
+        corrected_w (array):
+            Array of relevance vectors and correct weights.
+
+        Returns
+        -------
+        score_upperbound_pos (float):
+           The sum of all positive weight * kernel function corresponding to the nearest positive relevance vectors
+
+        score_upperbound_neg (float):
+            The weight * kernel function corresponding to the nearest negative relevance vector.
+        '''
+        score_plus = np.zeros([K.shape[0], 1], dtype=np.float64)
+        score_minus = np.zeros([K.shape[0], 1], dtype=np.float64)
+        score_upperbound_pos = np.zeros([K.shape[0], 1], dtype=np.float64)
+        score_upperbound_neg = np.zeros([K.shape[0], 1], dtype=np.float64)
+        plus_apha = corrected_w[corrected_w > 0]
+        plus_apha_total = np.sum(plus_apha)
+        for i in range(K.shape[0]):
+            k_row = np.zeros([len(corrected_w), 1])
+            for j in range(len(corrected_w)):
+                if corrected_w[j] >= 0:
+                    continue
+                k_row[j] = K[i, j]
+            score_minus[i][0] = np.max(k_row)
+            minus_idx_min = np.argmax(k_row)
+            k_row = np.zeros([len(corrected_w), 1])
+            for j in range(len(corrected_w)):
+                if corrected_w[j] <= 0:
+                    continue
+                k_row[j] = K[i, j]
+            score_plus[i][0] = np.max(k_row)
+            score_upperbound_pos[i][0] = plus_apha_total * score_plus[i][0]
+            score_upperbound_neg[i][0] = corrected_w[minus_idx_min] * score_minus[i][0]
+        return score_upperbound_pos, score_upperbound_neg

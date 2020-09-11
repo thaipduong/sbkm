@@ -10,6 +10,13 @@ Run ```python sbkm_demo.py``` for a demo with Intel Research Lab dataset
 
 <img src="figs/demo.gif" width="900">
 
+Run ```python collision_checking_demo.py``` for a demo of our collision checking methods for line segments and curves.
+<p align="middle">
+<img src="figs/check_lines.png" width="450">
+<img src="figs/check_curves.png" width="450">
+</p>
+
+
 ## Citation
 If you find our papers/code useful for your research, please cite our work as follows.
 

@@ -2,7 +2,7 @@ from sbkm.sbkm import SBKM
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-#import pickle
+import pickle
 import time
 
 #
@@ -36,13 +36,13 @@ print(sum(Y_train), sum(Y_test))
 #
 # Plot the dataset accumulated from all time steps.
 #
-''''''
+'''
 plt.figure()
 plt.scatter(X_train[:, 1], X_train[:, 2], c=Y_train, s=2)
 plt.title('Training data')
 plt.colorbar()
 plt.show()
-
+'''
 
 #
 # Set up our SBKM model
@@ -111,7 +111,7 @@ for ith_scan in range(0, max_t, skip):
     plt.close("all")
 
 
-# f = open("./outputs/sbkm_class.pkl", "wb")
+# f = open("./outputs/sbkm_class_obj.pkl", "wb")
 # pickle.dump(sbkm_map, f)
 # f.close()
 #

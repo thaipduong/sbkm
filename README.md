@@ -12,7 +12,7 @@ Run ```python sbkm_demo.py``` for a demo with Intel Research Lab dataset
 
 Run ```python collision_checking_demo.py``` for a demo of our collision checking methods for line segments and curves.
 <p float="left">
-<img src="figs/check_lines.png" width="420"><img src="figs/check_curves.png" width="420">
+<img src="figs/check_lines.png" width="350"><img src="figs/check_curves.png" width="350">
 </p>
 
 

@@ -8,11 +8,12 @@ Tested with Ubuntu 18.04 and Python 3.7.
 ## Demo
 Run ```python sbkm_demo.py``` for a demo with Intel Research Lab dataset
 
-<img src="figs/demo.gif" width="1000">
+<img src="figs/demo.gif" width="900">
 
-Run ```python collision_checking_demo.py``` for a demo of our collision checking methods for line segments (left) and curves (right).
+Run ```python collision_checking_demo.py``` for a demo of our collision checking methods for line segments (top) and curves (bottom).
 <p float="left">
-<img src="figs/check_lines.png" width="495"><img src="figs/check_curves.png" width="495">
+<img src="figs/check_lines.png" width="900">
+<img src="figs/check_curves.png" width="900">
 </p>
 
 

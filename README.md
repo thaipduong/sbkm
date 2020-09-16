@@ -23,13 +23,16 @@ If you find our papers/code useful for your research, please cite our work as fo
 1. T. Duong, M. Yip, N. Atanasov. [Autonomous Navigation in Unknown Environments with Sparse __*Bayesian*__ Kernel-based Occupancy Mapping](https://thaipduong.github.io/sbkm/). In Submission. 2020
 
  ```bibtex
-@article{duong2020autonomousbayesian,
-  title={Autonomous Navigation in Unknown Environments with Sparse Bayesian Kernel-based Occupancy Mapping},
-  author={Duong, Thai and Yip, Michael and Atanasov, Nikolay},
-  url = {https://thaipduong.github.io/sbkm},
-  journal={In Submission},
-  year={2020}
- }
+@misc{duong2020autonomousbayesian,
+title={Autonomous Navigation in Unknown Environments with Sparse Bayesian Kernel-based Occupancy Mapping},
+author={Duong, Thai and Yip, Michael and Atanasov, Nikolay},
+url = {https://thaipduong.github.io/sbkm},
+pdf = {https://arxiv.org/pdf/2009.07207.pdf}
+eprint={2009.07207},
+archivePrefix={arXiv},
+primaryClass={cs.RO}
+year={2020}
+}
 ```
 2.  T. Duong, N. Das, M. Yip, N. Atanasov. [Autonomous Navigation in Unknown Environments using Sparse Kernel-based Occupancy Mapping](https://thaipduong.github.io/kernelbasedmap/). IEEE International Conference on Robotics and Automation (ICRA), 2020.
  

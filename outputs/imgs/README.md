@@ -1,0 +1,1 @@
+This folder contains output images from our demo.

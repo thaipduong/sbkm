@@ -6,7 +6,7 @@ Please check out our project website for more details: https://thaipduong.github
 Our code depends on the following Python packages: numpy, scipy, panda, rtree, matplotlib, sklearn.
 Tested with Ubuntu 18.04 and Python 3.7.
 ## Demo
-Run ```python sbkm_demo.py``` for a demo with Intel Research Lab dataset
+Run ```mkdir ./outputs/imgs``` and ```python sbkm_demo.py``` for a demo with Intel Research Lab dataset
 
 <img src="figs/demo.gif" width="900">
 

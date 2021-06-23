@@ -3,7 +3,7 @@ This repo provides code for our paper "Autonomous Navigation in Unknown Environm
 Please check out our project website for more details: https://thaipduong.github.io/sbkm.
 
 ## Dependencies
-Our code is tested with Ubuntu 18.04 and Python 3.7. It depends on the following Python packages: numpy 1.17.4, scipy 1.6.2, pandas 1.1.0, rtree 0.9.4, matplotlib 3.1.0, scikit-learn 0.20.4. Newer versions of these packages might work but have not been tested. 
+Our code is tested with Ubuntu 18.04 and Python 3.7. It depends on the following Python packages: ```numpy 1.17.4, scipy 1.6.2, pandas 1.1.0, rtree 0.9.4, matplotlib 3.1.0, scikit-learn 0.20.4```. Newer versions of these packages might work but have not been tested. 
 ## Demo
 Run ```python sbkm_demo.py``` for a demo with Intel Research Lab dataset
 
